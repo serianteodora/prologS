@@ -2,7 +2,6 @@
 :-use_module(library(lists)).
 :-use_module(library(system)).
 :-use_module(library(file_systems)).
-:-use_module(library(process)).
 :-op(900,fy,not).
 :-dynamic fapt/3.
 :-dynamic interogat/1.
@@ -45,7 +44,7 @@ den_fis_fapte(Fis_temp) :- atom_concat('output_parcuri','/fapte/fapte.txt',Fis_t
 den_fis_fapte_temp(Fis_temp) :- atom_concat('output_parcuri','/fapte/fapte.txt',Fis_temp).    
 scrie_fapte :- %creaza_fisier_fapte_t(Fis_t)
                 den_fis_fapte_temp(Fis_t),creaza_fisier_fapte(Fis_n),
-               tell(Fis_t),afiseaza_fapte,told,citeste_scrie_f(Fis_t,Fis_n).           
+               tell(Fis_t),afiseaza_fapte,told,citeste_scrie_f(Fis_t,Fis_n).
 afiseaza_fapte :-
 write('Fapte existente în baza de cunostinte:'),
 nl,nl, write(' (Atribut,valoare) '), nl,nl,
@@ -124,7 +123,7 @@ retractall(intrebare_curenta(_,_,_)),
 retractall(scop(_)),
 retractall(interogabil(_)),
 retractall(regula(_,_,_)),
-incarca('reguli.txt').
+incarca('reguliSE.txt').
 
 
 fg1(Scop,FC_curent,Istorie,OptiuniUrm,MesajUrm) :-
@@ -147,13 +146,6 @@ realizare_scop1(H,FC,Istorie,OptiuniUrm,MesajUrm),
 Val_interm is min(Val_actuala,FC),
 Val_interm >= 20,
 dem1(T,Val_interm,Val_finala,Istorie,OptiuniUrm,MesajUrm) ;true).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-reset_foldere:- stergere_fold('output_parcuri/descrieri'),stergere_fold('output_parcuri/fapte'),
-				stergere_fold('output_parcuri/cum'),stergere_fold('output_parcuri/temp').			
-stergere_fold(V):- file_members_of_directory(V,S),stergere_fisiere_fold(S).
-stergere_fisiere_fold([]).
-stergere_fisiere_fold([H|T]):- A-B = H,delete_file(B),stergere_fisiere_fold(T).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pornire :-
@@ -181,7 +173,7 @@ executa([reinitiaza]) :-
 	retractall(fapt(_,_,_)),
 	retractall(detalii(_,_,_,_)),!.
 executa([afisare_fapte]) :- afiseaza_fapte,scrie_fapte,!.
-executa([cum|L]) :- cum(L),!.
+executa([cum|L]) :- cum(L),scrie_cum(L),!.
 executa([iesire]):-!.
 
 
@@ -190,333 +182,28 @@ executa([iesire]):-!.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-creaza_fis_descriere(Val,Fis_temp):- if(directory_exists('output_parcuri/descrieri'),(den_fis_descriere(Val,Fis_temp)),
-			(make_directory('output_parcuri/descrieri'),(den_fis_descriere(Val,Fis_temp)))).
-den_fis_descriere(Val,Fis_temp):- atom_concat('output_parcuri/descrieri/',Val,D),%NumeParc]
-						atom_concat(D,'.txt',Fis_temp).
-scrie_fis_descriere(Val):- creaza_fis_descriere(Val,Fis),tell(Fis),citeste_optiune([afis_descriere,Val]),told.
-executa([detalii_solutii]):- %write('verifica_interogat'),nl,verifica_interogat,
-							%write('a terminat verifica_interogat'), nl,
-	verifica_interogat,						
+executa([detalii_solutii]):- write('verifica_interogat'),nl,verifica_interogat,
+							write('a terminat verifica_interogat'), nl,
+							
 	see('date_sol.txt'), incarca_detalii,seen,
 	write('Introduceti una din urmatoarele optiuni: '),
 	nl,nl,
 	repeat,
-	write(' afis_descriere afis_ratinguri afis_imagini matrice m_principal ' ),
+	write(' afis_descriere afis_ratinguri afis_imagini m_principal ' ),
 	nl,nl,write('|: '),citeste_linie([H|T]),
-	citeste_optiune([H|T]), H == m_principal,!.
+	citeste_optiune([H|T]), (H == m_principal,!).
 
+%fapt(av(Atr,Val),FC,_), 
 citeste_optiune([afis_descriere,NumeParc]) :- fapt(av(parc,NumeParc),_,_), write(NumeParc),nl,
 											  detalii(NumeParc, _, _, Descriere), write(Descriere),nl.
-citeste_optiune([afis_descriere]) :- bagof(Val,FC ^ I ^ fapt(av(parc,Val),FC,I),Lnume),afiseaza_descriere(Lnume).
+citeste_optiune([afis_descriere]) :- bagof(Val,FC ^ I ^ fapt(av(parc,Val),FC,I),Lnume), afiseaza_descriere(Lnume).
 
-afiseaza_descriere([H|T]) :- detalii(H, _, _, Descriere), format('Descriere parc ~s : ~s',[H,Descriere]),nl,afiseaza_descriere(T).
-afiseaza_descriere([]) :- nl,!.								
+afiseaza_descriere([H|T]) :- detalii(H, _, _, Descriere), write(H),nl, write(Descriere),nl, afiseaza_descriere(T).
+afiseaza_descriere([]).									
 									
-citeste_optiune([afis_ratinguri]) :-  setof(NumeParc,FC ^ I ^ fapt(av(parc,NumeParc),FC,I),Lnume),
-									  afisare_ratinguri(Lnume),nl,! .
-									  %Lnume),write(Lnume),write('  _______'),nl,
-									  
-
-
-citeste_optiune([afis_ratinguri,NumeParc|_]) :- fapt(av(parc,NumeParc),_,_),
-											  detalii(NumeParc, _, Lrating,_),	
-											  format('Parcul ~s are urmatoarele ratinguri:',NumeParc),nl,
-											  sorteaza_ratinguri(Lrating,LratingSortat), %write(LratingSortat),nl,
-											  afisare_ratinguri_aux(LratingSortat),nl,!.
-											  
-											  
-
-afisare_ratinguri([NumeParc|T]) :- detalii(NumeParc, _ , Rating, _), 
-								   sorteaza_ratinguri(Rating,RatingSortat),
-								   format('Parcul ~s are urmatoarele ratinguri:',NumeParc),nl,
-								   afisare_ratinguri_aux(RatingSortat),
-								   afisare_ratinguri(T),nl.
-afisare_ratinguri([]).
-
-afisare_ratinguri_aux([rat(Atr,Val)|T]) :- format(' ~s : ~d/5',[Atr,Val]),nl, afisare_ratinguri_aux(T).
-afisare_ratinguri_aux([]).
-
-
-											  
-%rat(Atr,Val)
-
-sorteaza_ratinguri(L,Lrez):- sorteaza_lista_de_liste(L,Lrez).%,nl,nl,write('Ratinguri'),nl,nl,afisare_ratinguri(Lrez),nl,nl ,!.
-%daca nu avem o lista de liste de ratinguri, atunci la apelul predicatului sorteaza da fail si intra pe a doua clauza a lui p()
-
-sorteaza_ratinguri(L,Lrez):- sorteaza(L,Lrez).%, write(Hrez),nl,!.
-sorteaza_lista_de_liste([H|T],[Hrez|Trez]) :- sorteaza(H,Hrez), sorteaza_lista_de_liste(T,Trez).
-sorteaza_lista_de_liste([],[]).
-
-
-
-sorteaza([H|T],Lrez) :- sorteazaElem(T,[H],Lrez).
-sorteazaElem([rat(A1,H)|T],[rat(A2,H1)|Laux], Lrez) :- H @=< H1,!,sorteazaElem(T,[rat(A1,H),rat(A2,H1)|Laux],Lrez).
-sorteazaElem([H|T],Laux,Lrez) :- inserts(H, Laux,LauxNou), sorteazaElem(T,LauxNou,Lrez).
-sorteazaElem([],Laux,Lrez):- lista_rev(Laux,Lrez).
-
-inserts(rat(A1,H),[rat(A2,H1)|Laux],[rat(A1,H),rat(A2,H1)|Laux]) :- H @=< H1,!. 
-inserts(H,[H1|Laux],[H1|LauxNou]) :- inserts(H,Laux,LauxNou).
-inserts(H,[],[H]).
-
-
-
-
-lista_rev(L,LRez):- inv_aux(L, [], LRez).
-inv_aux([H|T],Laux,LRez):- inv_aux(T, [H|Laux],LRez). 
-inv_aux([],Laux,Laux).									  
-
-%citeste_optiune([afis_imagini]) :- setof(Imagine,NumeParc ^ Rating ^ Descriere ^ detalii(NumeParc, Imagine, Rating, Descriere),L), write(L),nl .
-citeste_optiune([afis_imagini]) :- setof(NumeParc,FC ^ I ^ fapt(av(parc,NumeParc),FC,I),Lnume),
-								   afisare_imagini(Lnume),!.
-								   
-citeste_optiune([afis_imagini,NumeParc|_]) :- fapt(av(parc,NumeParc),_,_),
-											  detalii(NumeParc, Imagine, _,_),	
-											  format('Se deschide imagine cu parcul ~s ',NumeParc),nl,nl,
-											  atom_chars(Imagine,ImagineCh),
-											  sterg_apostrof(ImagineCh,ImagineNoua),
-											  atom_chars(ImagineAtom,ImagineNoua),
-											  current_directory(D),atom_concat('file:///',D,Aux),
-											  atom_concat(Aux,'/Imagini/',Aux1),atom_concat(Aux1,ImagineAtom,Path),
-											  process_create('C:/Program Files (x86)/Mozilla Firefox/firefox.exe',[Path]),!.
-											  
-								   
-afisare_imagini([NumeParc|T]) :-  detalii(NumeParc, Imagine , _, _), 
-								  format('Se deschide imagine cu parcul ~s ',NumeParc),nl,nl,
-								  atom_chars(Imagine,ImagineCh),
-								  sterg_apostrof(ImagineCh,ImagineNoua),
-								  atom_chars(ImagineAtom,ImagineNoua),
-								  current_directory(D),atom_concat('file:///',D,Aux),
-								  atom_concat(Aux,'/Imagini/',Aux1),atom_concat(Aux1,ImagineAtom,Path),
-								  process_create('C:/Program Files (x86)/Chrome/chrome.exe',[Path]),
-								  afisare_imagini(T),!.
-								  
-afisare_imagini([]).
-
-sterg_apostrof([],[]).
-sterg_apostrof(['\''|Rest], Rez) :- sterg_apostrof(Rest, Rez). %'
-sterg_apostrof([M|Rest],[M|Rez]) :- sterg_apostrof(Rest,Rez).	
-
-
+citeste_optiune([afis_ratinguri]) :- setof(Rating,NumeParc ^ Imagine ^ Descriere ^ detalii(NumeParc, Imagine, Rating, Descriere),L), write(L),nl .
+citeste_optiune([afis_imagini]) :- setof(Imagine,NumeParc ^ Rating ^ Descriere ^ detalii(NumeParc, Imagine, Rating, Descriere),L), write(L),nl .
 citeste_optiune([m_principal]) :- !.
-
-citeste_optiune([m]) :- matrice_java(NrLinii,NrColoane,ListaParcuri,MatriceValori),
-						write('NrLinii = '),write(NrLinii),nl,
-						write('NrColoane = '),write(NrColoane),nl,
-						write('ListaParcuri = '),write(ListaParcuri),nl,
-						write('MatriceValori = '),write(MatriceValori),nl.
-
-matrice_java(NrLinii,NrColoane,ListaParcuri,MatriceValori) :- 
-			setof(NumeParc,FC ^ I ^ fapt(av(parc,NumeParc),FC,I),Lnume),
-		    categorii_rating(Lnume,[],Lcategorii), 			
-			
-			length(Lcategorii,NCategorii),
-			NrLinii1 is NCategorii + 1,
-			number_chars(NrLinii1,NrLinii),
-
-			length(Lnume,NNume),
-			NrColoane1 is NNume + 1,
-			number_chars(NrColoane1,NrColoane),
-			
-			Lnume = [H1|T1],
-			transforma_in_sir(T1,H1,ListaParcuri),
-			%Lcategorii = [H2|T2],
-			%transforma_in_sir(T2,H2,ListaCategorii),
-			coloane_ratinguri(Lnume,Lcategorii,MatriceValori),!.
-			%write('MatriceValori = '),write(MatriceValori),nl,!.
-			
-			
-transforma_in_sir([H|T],Aux,ListaParcuri):- atom_concat(Aux,',',Aux1),
-											atom_concat(Aux1,H,Aux2),
-											transforma_in_sir(T,Aux2,ListaParcuri).
-transforma_in_sir([],ListaParcuri,ListaParcuri).
-			
-			
-						
-coloane_ratinguri(Lnume,[Hcateg|Tcateg],[Linie|T]) :- 
-                        linie_ratinguri(Lnume,Hcateg,Hcateg,Linie),
-						%write('Linie  = '),write(Linie),nl,	
-						coloane_ratinguri(Lnume,Tcateg,T).
-						
-coloane_ratinguri(_,[],[]):- !.					
-
-linie_ratinguri([Hnume|Tnume],Hcateg,Aux,Linie) :- 
-						detalii(Hnume,_,Rating,_),
-						setof(Val,(member(rat(Hcateg,Val),Rating)),L),	
-						length(L,N),N > 0,!,
-						L = [E],
-						number_chars(E,LCh),
-						atom_chars(LAtom,LCh),
-						atom_concat(Aux,',',Aux1),
-						atom_concat(Aux1,LAtom,Aux2),
-						linie_ratinguri(Tnume,Hcateg,Aux2,Linie)
-						;
-						atom_concat(Aux,',',Aux1),
-						atom_concat(Aux1,'-',Aux2),
-						linie_ratinguri(Tnume,Hcateg,Aux2,Linie).
-						
-linie_ratinguri([],_,Linie,Linie).%:- write('Linie SF = '),write(Linie),nl,!.						
-						
-						
-transforma_in_sir([H|T],Aux,ListaParcuri):- atom_concat(Aux,',',Aux1),
-											atom_concat(Aux1,H,Aux2),
-											transforma_in_sir(T,Aux2,ListaParcuri).
-transforma_in_sir([],ListaParcuri,ListaParcuri):- !.
-
-
-citeste_optiune([matrice]) :- setof(NumeParc,FC ^ I ^ fapt(av(parc,NumeParc),FC,I),Lnume),
-							 % write('Lista cu nume de parcuri'),nl, write(Lnume),nl,
-							  categorii_rating(Lnume,[],Lcategorii), 
-							  %write('Categoriile '),nl,write(Lcategorii),nl,
-							  latime_coloana_ratinguri(Lcategorii,0,Latime),
-							  %write('Latime coloana '),write(Latime),nl,
-							  length(Lnume,NrParcuri),NrCol is NrParcuri + 1,%write('NrCol '),write(NrCol),nl,
-							  LatimeBotttom is (Latime + 4)* NrCol,
-							  LatimeRepetitiva is Latime + 3,
-							  number_chars( LatimeBotttom, LatimeBotttomChar),
-							  atom_chars(NrBottom,LatimeBotttomChar),
-							  atom_concat('~`-t~',NrBottom,NrAux),
-							  atom_concat(NrAux,'|~n',Bottom_line_format),
-							  
-							  number_chars(LatimeRepetitiva,LatimeRepetitivaAux),
-							  atom_chars(LatimeRepCh,LatimeRepetitivaAux),
-							  atom_concat('~` t~',LatimeRepCh,LatimeRepAux), 
-							  atom_concat(LatimeRepAux,'+|',LatimeRep),
-							  
-							  format_linie_repetitiva(LatimeRepetitiva,NrCol,LatimeRep,FormatRepetitiv),
-							  							  		  
-							  						  							  
-							  LatimeFirstCol is Latime + 3,
-							  number_chars(LatimeFirstCol,LatimeCh),
-							  atom_chars(LatimeAtom,LatimeCh),
-							  atom_concat('~` t~',LatimeAtom,AuxPrimaLinieSiCol),
-							  atom_concat(AuxPrimaLinieSiCol,'+|',Linie_1_col_1),
-							  
-							  
-							  
-							  format(Bottom_line_format, []),
-							  format(FormatRepetitiv,[]),nl,
-							  afisare_prima_linie(Lnume, LatimeFirstCol,Linie_1_col_1),
-							  format(Bottom_line_format, []),
-							  
-							  LatimeRestCol1 is Latime + 1,
-							  number_chars(LatimeRestCol1,LatimeAux1),
-							  atom_chars(LatimeAtom1,LatimeAux1),
-							  
-							  LatimeRestCol2 is Latime - 2,
-							  number_chars(LatimeRestCol2,LatimeAux2),
-							  atom_chars(LatimeAtom2,LatimeAux2),
-							  
-							  
-							  initializare_lista_sume(NrParcuri,[],ListaSume),
-							  %write('Lista Sume = '),write(ListaSume),nl,
-							  length(Lcategorii,NrCategRating),
-							  afisare_linii_matrice(Lnume,Lcategorii,LatimeAtom1,LatimeAtom2,FormatRepetitiv,Bottom_line_format,ListaSume,NrCategRating).
-						
-
- afisare_linii_matrice(Lnume,[Hcateg|Tcateg],Latime1,LatimeRestCol,FormatRep,Bottom,ListaSume,NrCategRating):-
-						atom_concat('~` t~2+',Hcateg,Aux),
-						atom_concat(Aux,'~` t~',Aux2),
-						atom_concat(Aux2,Latime1,Aux3),
-						atom_concat(Aux3,'+|',FormatLinie),
-						contine(Hcateg,Lnume,FormatLinie,FormatLinieRez,ListaSume,ListaSumeNoua,LatimeRestCol),
-						format(FormatRep,[]),nl,
-						format(FormatLinieRez,[]),nl,
-						format(Bottom,[]),
-						%write('ListaSumeNoua = '),write(ListaSumeNoua),nl,
-						afisare_linii_matrice(Lnume,Tcateg,Latime1,LatimeRestCol,FormatRep,Bottom,ListaSumeNoua,NrCategRating).
-						
-afisare_linii_matrice(_,[],Latime1,Latime2,FormatRep,Bottom,ListaSum,NrCategRating) :- 
-						atom_concat('~` t~2+','Total',Aux),
-						atom_concat(Aux,'~` t~',Aux5),
-						atom_concat(Aux5,Latime1,Aux2),
-						atom_concat(Aux2,'+|',Aux3),
-						format(FormatRep,[]),nl,
-						afisare_total_rating(Aux3,FormatTotal,ListaSum,Latime2,NrCategRating,SumTotal),
-						format(FormatTotal,SumTotal),nl,
-						format(Bottom,[]).
-
-						
-afisare_total_rating(Format,FormatTotal,[Sum|Tsum],Latime,Impartitor,[Htotal|Ttotal]):- 
-												 atom_concat(Format,'~` t~6+',Aux),
-												 Htotal is Sum/Impartitor,
-												 atom_concat(Aux,'~3f~` t~',Aux2),
-												 atom_concat(Aux2,Latime,Aux3),
-												 atom_concat(Aux3,'+|',Aux4),
-												 afisare_total_rating(Aux4,FormatTotal,Tsum,Latime,Impartitor,Ttotal).
-afisare_total_rating(FormatTotal,FormatTotal,[],_,_,[]).											 
-
-contine(Hcateg,[Hnume|Tnume],FormatLinie,FormatLinieRez,[HsumAux|TsumAux], [Hsum|Tsum],Latime) :- 
-													   detalii(Hnume,_,Rating,_),
-													   setof(Val,(member(rat(Hcateg,Val),Rating)),L),
-													   length(L,N),N > 0,!,
-													   L = [E],
-													   Hsum is HsumAux + E,
-													   number_chars(E,LCh),
-													   atom_chars(LAtom,LCh),
-													   atom_concat('~` t~6+',LAtom,AuxCol),
-													   atom_concat(AuxCol,'/5.0~` t~',Auxi),
-													   atom_concat(Auxi,Latime,Aux4),
-													   atom_concat(Aux4,'+|',Aux5),
-													   atom_concat(FormatLinie,Aux5,FormatLinieNou),
-													   contine(Hcateg,Tnume,FormatLinieNou,FormatLinieRez,TsumAux,Tsum,Latime)
-													   ;
-													    atom_concat('~` t~6+---~` t~',Latime,Aux1),
-														atom_concat(Aux1,'+|',Aux2),
-														atom_concat(FormatLinie,Aux2,FormatLinieNou),
-														Hsum = HsumAux,
-													   contine(Hcateg,Tnume,FormatLinieNou,FormatLinieRez,TsumAux,Tsum,Latime).
-contine(_,[],FormatLinie,FormatLinie,[],[],_).												   
-										
-initializare_lista_sume(Nr,Aux,Rez) :- Nr > 0, Nr1 is Nr - 1,
-									   initializare_lista_sume(Nr1,[0|Aux],Rez).
-initializare_lista_sume(0,Rez,Rez).
-										
-							  
-afisare_prima_linie([H|T],Latime,Rez) :- 	   atom_concat('~` t~2+',H,Aux), 
-											   atom_chars(H,Haux),
-											   length(Haux,Lh),
-											   LH is Latime - 1,
-											   number_chars(LH,Lch),
-											   atom_chars(AtomLH,Lch),
-											   atom_concat(Aux,'~` t~',Aux1),
-											   atom_concat(Aux1,AtomLH,Aux2),
-											   atom_concat(Aux2,'+|',Aux3), atom_concat(Rez,Aux3,RezNou),
-											   afisare_prima_linie(T,Latime,RezNou).
-
-afisare_prima_linie([],_,RezFinal) :- format(RezFinal,[]),nl.
-
-			  
-format_linie_repetitiva(LatimeCol,NrCol,LatimeRepAux,FormatRepetitiv):- LatimeCol1 is LatimeCol + 1,
-														   number_chars(LatimeCol1,CharLatime),
-														   atom_chars(AtomLatime,CharLatime),
-														   atom_concat('~',AtomLatime,Aux),
-														   atom_concat(Aux,'+|',Aux2),
-														   format_linie_repetitiva_aux(LatimeRepAux,Aux2,FormatRepetitiv,NrCol).
-format_linie_repetitiva_aux(Form,Aux2,FormatRepetitiv,Nr):- Nr > 1, Nr1 is Nr - 1,
-												    atom_concat(Form,Aux2,FormNou1),
-												   % format(FormNou1,[]),nl,
-													format_linie_repetitiva_aux(FormNou1,Aux2,FormatRepetitiv,Nr1).
-format_linie_repetitiva_aux(Form,_,Form,1).											
-
-categorii_rating([NumeParc|T],Lcategorii,LcategoriiRez) :- detalii(NumeParc, _ , Rating, _), 
-								  categorii_rating_aux(Rating,Lcategorii,LcategoriiNou),
-								  categorii_rating(T,LcategoriiNou,LcategoriiRez).
-categorii_rating([],LcategoriiRez,LcategoriiRez).								  
-								  
-								  
-categorii_rating_aux([rat(Atr,Val)|T],Aux,Lcategorii) :- member(Atr,Aux),!,
-														 categorii_rating_aux(T,Aux,Lcategorii);
-														 categorii_rating_aux(T,[Atr|Aux],Lcategorii).
-categorii_rating_aux([],Lcategorii,Lcategorii).
-
-latime_coloana_ratinguri([H|T],Aux,Latime) :- atom_chars(H,L), length(L,NrCh),NrCh > Aux,!, 
-											 latime_coloana_ratinguri(T,NrCh,Latime) ; 
-											 latime_coloana_ratinguri(T,Aux,Latime).
-latime_coloana_ratinguri([],Latime,Latime).
-
-
-
 
 
 
@@ -534,9 +221,6 @@ citeste_descriere(L) :-  citeste_linie(Lin), %write(Lin),nl,
 				   
 				   
 				   
-				   
-				   
-				   
 
 %incarca_detalii :- repeat,citeste_linie(L),
 %	               proceseaza(L),L == [end_of_file],nl.
@@ -551,7 +235,7 @@ citeste_descriere(L) :-  citeste_linie(Lin), citeste_descriere(Rest), append(Lin
 citeste_descriere([end_of_file]) :- citeste_linie(Lin), append(Lrez,[end_of_file],Lrez).
 */	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-director :- if(directory_exists('output_parcuri'),fisier_log_suprascriere,(make_directory('output_parcuri'),fisier_log_suprascriere)).
+director :- if(directory_exists('output_parcuri'),fisier_log_suprascriere,(make_directory('output_parcuri'))).
 numar(Contor):- retract(count(Old)), New is Old + 1,
                 assert(count(New)),Contor is New.
 %timp(-Hour,-Minute,-Seconds)
@@ -629,7 +313,9 @@ folder(Val,Folder):- directory_members_of_directory('output_parcuri',S),lista_fo
 			 n_element(Val,Index),n_folder(L,Index,Folder).
 denumire_fisier(Den,Den_fis):- atom_concat(Den,'/demonstratie_raspuns.txt',Den_fis).
 denumire_fisier_temp(Den,Fis_temp):- atom_concat(Den,'/temp.txt',Fis_temp).
-
+creaza_folder_temp(Val,Fis_temp):- if(directory_exists('output_parcuri/temp'),(den_fis_temp(Val,Fis_temp)),
+			(make_directory('output_parcuri/temp'),(den_fis_temp(Fis_temp)))).			
+den_fis_temp(Val,Fis_temp):- atom_concat('output_parcuri/temp/',Val,D),atom_concat(D,'.txt',Fis_temp).
 scrie_demonstratii(Den,Val):- denumire_fisier(Den,Den_fis),creaza_folder_temp(Val,Fis_temp),%denumire_fisier_temp(Den,Fis_temp),
                              Scop = av(_,Val),tell(Fis_temp),cum(Scop),told,
 							 open(Den_fis,append,Stream),lin(Stream,15),nl(Stream),flush_output(Stream),
@@ -669,25 +355,21 @@ executa([_|_]) :- write('Comanda incorecta! '),nl.
 	
 %scopuri_princ :- scop(Atr),determina(Atr), afiseaza_scop(Atr),fail.
 %scopuri_princ.
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%					   
 scopuri_princ :- scop(Atr),determina(Atr),fail.
 scopuri_princ :- scop(Atr),Scop = av(Atr,_),
 				 if(setof(st(FC,Scop), Istoric ^ fapt(Scop,FC,Istoric),LF),
 				 (scrie_lista_rev(LF)),
 				 (write('Nu exista solutii'),nl)).
-
+scrie_lista_rev([]):- nl.
 scrie_lista_rev([H|T]) :- scrie_lista_rev(T), H = st(_,av(Atrib,Val)),
 					   afiseaza_scop(Atrib), tab(1),
 					   %,fisier_log_sol(Val)
 					   creare_folder_sol(Val).
-scrie_lista_rev([]):- nl.
 
 /*scopuri_princ(Stream) :-
 scop(Atr),determina(Stream,Atr), afiseaza_scop(Stream,Atr),fail.
 */
-
-
 scopuri_princ(Stream) :-
 scop(Atr),determina(Stream,Atr),fail.
 scopuri_princ(Stream) :- scop(Atr),Scop = av(Atr,_),
@@ -697,7 +379,7 @@ scopuri_princ(Stream) :- scop(Atr),Scop = av(Atr,_),
 scrie_lista_rev(Stream,[]):- nl,nl(Stream),flush_output(Stream),!.
 scrie_lista_rev(Stream,[H|T]) :- scrie_lista_rev(T), H = st(_,av(Atrib,Val)),
 					   afiseaza_scop(Stream,Atrib),write(Stream,' '),%fisier_log_sol(Val),
-					   creare_folder_sol(Val),scrie_fis_descriere(Val).
+					   creare_folder_sol(Val).
 scopuri_princ(_).
 
 scrie_foldere(Stream,[]):- nl,nl(Stream),flush_output(Stream),!.	
@@ -795,7 +477,7 @@ not interogat(av(Atr,_)),
 interogabil(Atr,Optiuni,Mesaj),
 interogheaza(Stream,Atr,Mesaj,Optiuni,Istorie),nl,write('Am interogat'),nl,
 asserta( interogat(av(Atr,_)) ).
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 cum([]) :- write('Scop? '),nl,
 write('|:'),citeste_linie(Linie),nl,
 transformare(Scop,Linie), cum(Scop).
@@ -993,7 +675,6 @@ incarca(F) :-
 	retractall(interogat(_)),retractall(fapt(_,_,_)),
 	retractall(scop(_)),retractall(interogabil(_,_,_)),
 	retractall(regula(_,_,_)),
-	reset_foldere,
 	see(F),incarca_reguli,seen,!.
 
 incarca_reguli :-
@@ -1338,29 +1019,34 @@ proceseaza_termen_citit(Stream, comanda(consulta),C):-
 				scopuri_princ(Stream),
 				C1 is C+1,
 				proceseaza_text_primit(Stream,C1).
-				
-proceseaza_termen_citit(Stream, X, _):- % cand vrem sa-i spunem "Pa"
-				(X == end_of_file ; X == exit),
-				write(gata),nl,
-				close(Stream).
-				
-			
-proceseaza_termen_citit(Stream, Altceva,C):- %cand ii trimitem sistemului expert o comanda pe care n-o pricepe
-				write(Stream,'ce vrei, neica, de la mine?! '),write(Stream,Altceva),nl(Stream),
-				flush_output(Stream),
-				C1 is C+1,
-				proceseaza_text_primit(Stream,C1).
-				
+
 proceseaza_termen_citit(Stream,reinitiaza,C):-
 				write(Stream,'se reinitiaza consultarea  \n'),
 				flush_output(Stream),
 				executa([reinitiaza]),
 				C1 is C+1,
-				proceseaza_text_primit(Stream,C1).		
-			
+				proceseaza_text_primit(Stream,C1).
+				
+proceseaza_termen_citit(Stream,cum(X),C):-
+				write(Stream,'Se afiseaza demonstratia  \n'),
+				flush_output(Stream),
+				executa([cum|X]),
+				C1 is C+1,
+				proceseaza_text_primit(Stream,C1).				
+proceseaza_termen_citit(Stream, X, _):- % cand vrem sa-i spunem "Pa"
+				(X == end_of_file ; X == exit),
+				write(gata),nl,
+				close(Stream).
+				
 proceseaza_termen_citit(Stream,afisare_fapte,C):-
 				write(Stream,'se afiseaza faptele \n'),
 				flush_output(Stream),
 				executa([afisare_fapte]),
+				C1 is C+1,
+				proceseaza_text_primit(Stream,C1).
+		
+proceseaza_termen_citit(Stream, Altceva,C):- %cand ii trimitem sistemului expert o comanda pe care n-o pricepe
+				write(Stream,'ce vrei, neica, de la mine?! '),write(Stream,Altceva),nl(Stream),
+				flush_output(Stream),
 				C1 is C+1,
 				proceseaza_text_primit(Stream,C1).
